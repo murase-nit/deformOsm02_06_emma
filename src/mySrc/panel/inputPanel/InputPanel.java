@@ -70,8 +70,6 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 	private JButton displayOsmButton;	// osm要施設データ表示.
 	private JButton changeRoadDataModeButton;
 	private JButton changeRoadDataModeButton2;
-	private JButton putFocusButton;	// emma関係　focusを表示するボタン.
-	private JButton displayFGCRoad; // fgc道路の描画.
 	// 3番目のパネル.
 	private JButton deformedButton1;	// デフォルメマップ2ボタン
 	private JButton deformedButton2;	// デフォルメマップ2ボタン
@@ -81,7 +79,16 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 	private JButton checkConnectivityButton2;
 	private JSlider	  thresholdSlider;// 閾値関係.
 	private JLabel	  thresholdValue;// 閾値関係.
-
+	private JButton putFocusButton;	// emma関係　focusを表示するボタン.
+	private JButton displayFGCRoad; // fgc道路の描画.
+	private JButton putFocusButton_previous;	// emma関係　focusを表示するボタン.
+	private JButton displayFGCRoad_previous; // fgc道路の描画.
+	private JButton putFocusButton_all;	// emma関係　focusを表示するボタン.
+	private JButton displayFGCRoad_all; // fgc道路の描画.
+	private JButton glueRoadDensidyButton;	// glueの道路の密度を計測.
+	private JButton multiRoutingFgcButton;	// ルーティングの計測.
+	private JButton multiRoutingButton;	// ルーティングの計測.
+	
 	// 4番目のパネル.
 		
 	// 汎用インターフェース.
@@ -121,8 +128,6 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 		displayOsmButton = new JButton("dispaly");
 		changeRoadDataModeButton = new JButton("link");
 		changeRoadDataModeButton2 = new JButton("arc");
-		putFocusButton = new JButton("focus");
-		displayFGCRoad = new JButton("fgcRoad");
 		// 3番目のパネル.
 		deformedButton1 = new JButton("総描1");
 		deformedButton2 = new JButton("総描2");
@@ -130,9 +135,17 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 		deformedButton4 = new JButton("roadClass");
 		checkConnectivityButton = new JButton("connect");
 		checkConnectivityButton2 = new JButton("connect2");
-		
 		thresholdSlider = new JSlider(JSlider.HORIZONTAL, 0, 4500, 0);
 		thresholdValue = new JLabel("000");
+		putFocusButton = new JButton("focus");
+		displayFGCRoad = new JButton("fgcRoad");
+		putFocusButton_previous = new JButton("focus_p");
+		displayFGCRoad_previous = new JButton("fgcRoad_p");
+		putFocusButton_all = new JButton("focus_all");
+		displayFGCRoad_all = new JButton("fgcRoad_all");
+		glueRoadDensidyButton = new JButton("density");
+		multiRoutingFgcButton = new JButton("routingFGC");
+		multiRoutingButton = new JButton("routing");
 
 		// 汎用インターフェース.
 		publicCheckBox = new JCheckBox("", false);
@@ -269,15 +282,6 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 //		display1Panel.add(categoryButton);
 		display1Panel.add(categoryOsmButton);
 		
-		display4Panel.setLayout(layout);
-		gbc.gridx = 0;
-		gbc.gridy = 0;
-		layout.setConstraints(displayFGCRoad, gbc);
-		gbc.gridx = 1;
-		layout.setConstraints(putFocusButton, gbc);
-		display4Panel.add(displayFGCRoad);
-		display4Panel.add(putFocusButton);
-		
 		display5Panel.setLayout(layout);	// 右側3行目に関するコンポーネント.
 		gbc.gridx = 0;
 		gbc.gridy = 0;
@@ -351,6 +355,39 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 		forthPanel2.add(thresholdSlider);
 		forthPanel2.add(thresholdValue);
 		
+		forthPanel3.setLayout(layout);	// 4番目の3行目に関するコンポーネント.
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		layout.setConstraints(displayFGCRoad, gbc);
+		gbc.gridx = 1;
+		layout.setConstraints(putFocusButton, gbc);
+		gbc.gridx = 2;
+		layout.setConstraints(displayFGCRoad_previous, gbc);
+		gbc.gridx = 3;
+		layout.setConstraints(putFocusButton_previous, gbc);
+		gbc.gridx = 4;
+		layout.setConstraints(displayFGCRoad_all, gbc);
+		gbc.gridx = 5;
+		layout.setConstraints(putFocusButton_all, gbc);
+		forthPanel3.add(displayFGCRoad);
+		forthPanel3.add(putFocusButton);
+		forthPanel3.add(displayFGCRoad_previous);
+		forthPanel3.add(putFocusButton_previous);
+		forthPanel3.add(displayFGCRoad_all);
+		forthPanel3.add(putFocusButton_all);
+		
+		forthPanel4.setLayout(layout);	// 4番目の4行目に関するコンポーネント.
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		layout.setConstraints(glueRoadDensidyButton, gbc);
+		gbc.gridx = 1;
+		layout.setConstraints(multiRoutingFgcButton, gbc);
+		gbc.gridx = 2;
+		layout.setConstraints(multiRoutingButton, gbc);
+		forthPanel4.add(glueRoadDensidyButton);
+		forthPanel4.add(multiRoutingFgcButton);
+		forthPanel4.add(multiRoutingButton);
+		
 		forthPanel.setLayout(layout);	// 4番目のコンポーネント.
 		gbc.gridx = 0;
 		gbc.gridy = 0;
@@ -422,8 +459,6 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 		displayOsmButton.addActionListener(this);
 		changeRoadDataModeButton.addActionListener(this);
 		changeRoadDataModeButton2.addActionListener(this);
-		putFocusButton.addActionListener(this);
-		displayFGCRoad.addActionListener(this);
 		// 3番目のパネルに関するリスナ登録.
 		// 4番目のパネルに関するリスナ登録.
 		deformedButton1.addActionListener(this);
@@ -433,6 +468,15 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 		checkConnectivityButton.addActionListener(this);
 		checkConnectivityButton2.addActionListener(this);
 		thresholdSlider.addChangeListener(this);
+		putFocusButton.addActionListener(this);
+		displayFGCRoad.addActionListener(this);
+		putFocusButton_previous.addActionListener(this);
+		displayFGCRoad_previous.addActionListener(this);
+		putFocusButton_all.addActionListener(this);
+		displayFGCRoad_all.addActionListener(this);
+		glueRoadDensidyButton.addActionListener(this);
+		multiRoutingFgcButton.addActionListener(this);
+		multiRoutingButton.addActionListener(this);
 		// パブリックインターフェース.
 		publicCheckBox.addChangeListener(this);
 		
@@ -501,10 +545,6 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 		}else if(e.getSource() == displayOsmButton){	// OSM.
 			mapPanel.insertShopData(_CategoryOsmWindow.getCategory(), "OSM");
 //			System.out.println(_CategoryOsmWindow.getCategory());
-		}else if(e.getSource() == putFocusButton){	// EmmaのFoucs描画.
-			mapPanel.drawFocusGlue();
-		}else if(e.getSource() == displayFGCRoad){	// FGCの道路描画.
-			mapPanel.drawFGC_link();
 		}else if(e.getSource() == deformedButton1){	// ストローク関係.	// チェックがあればその場で表示，スライダーで数を指定.
 			mapPanel.SOA1(thresholdSlider.getValue(), true, !publicCheckBox.isSelected());
 		}else if(e.getSource() == deformedButton2){	// ストローク関係.　// チェックがあればその場で表示，スライダーで数を指定.
@@ -521,7 +561,26 @@ public class InputPanel  extends JPanel implements ActionListener ,ItemListener,
 			mapPanel.evalConnectivity("connect");
 		}else if(e.getSource() == checkConnectivityButton2){	// コネクティビティーの評価2.
 			mapPanel.evalConnectivity("connect2");
+		}else if(e.getSource() == putFocusButton){	// EmmaのFoucs描画.
+			mapPanel.drawFocusGlue("DrawGlue_v2");
+		}else if(e.getSource() == displayFGCRoad){	// FGCの道路描画.
+			mapPanel.drawFGC_link("DrawGlue_v2");
+		}else if(e.getSource() == putFocusButton_previous){	// EmmaのFoucs描画.
+			mapPanel.drawFocusGlue("DrawMitinariSenbetuAlgorithm");
+		}else if(e.getSource() == displayFGCRoad_previous){	// FGCの道路描画.
+			mapPanel.drawFGC_link("DrawMitinariSenbetuAlgorithm");
+		}else if(e.getSource() == putFocusButton_all){	// EmmaのFoucs描画.
+			mapPanel.drawFocusGlue("DrawElasticRoad");
+		}else if(e.getSource() == displayFGCRoad_all){	// FGCの道路描画.
+			mapPanel.drawFGC_link("DrawElasticRoad");
+		}else if(e.getSource() == glueRoadDensidyButton){	// glueの道路の密度を計測.
+			mapPanel.measureGlueRoadDensity();
+		}else if(e.getSource() == multiRoutingFgcButton){
+			mapPanel.measureGlueMultiRoute();
+		}else if(e.getSource() == multiRoutingButton){
+			mapPanel.measureMultiRoute();
 		}
+		
 		
 		
 	}

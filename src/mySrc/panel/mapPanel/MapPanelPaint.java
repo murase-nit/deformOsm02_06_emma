@@ -233,6 +233,23 @@ public class MapPanelPaint {
 			}
 		}
 	}
+	// 複数　経路探索の結果の描画.
+	public void paintMultiRouting(ArrayList<ArrayList<Point2D>>_routingResult, boolean _routingFlg){
+		if(_routingFlg){
+			for(int i=0; i<_routingResult.size(); i++){
+				for(int j=0; j<_routingResult.get(i).size()-1; j++){
+					//paint2dLine(_convert.convertLngLatToXyCoordinateLine2D(_routingResult.get(i)), Color.green, 5);
+					if(_routingResult.get(i).get(j) == null || _routingResult.get(i).get(j+1) == null) continue;
+					paint2dLine(_routingResult.get(i).get(j), _routingResult.get(i).get(j+1), Color.green, 5);
+					if(j==0){
+						paint2dEllipse(_routingResult.get(i).get(j), Color.pink, 5);
+					}else if(j==_routingResult.get(i).size()-2){
+						paint2dEllipse(_routingResult.get(i).get(j+1), Color.pink, 5);
+					}
+				}
+			}
+		}
+	}
 
 	
 	/////////////////////////////////////////////////////

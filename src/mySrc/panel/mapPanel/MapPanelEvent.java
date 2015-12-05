@@ -26,8 +26,8 @@ public class MapPanelEvent implements MouseListener, KeyListener{
 	public MapPanel _mapPanel;
 	
 	// 経路探索用.
-	int _sourceId = -11;
-	int _targetId = -11;
+	public int _sourceId = -11;
+	public int _targetId = -11;
 	
 	public MapPanelEvent(MapPanel aMapPanel) {
 		_mapPanel = aMapPanel;
@@ -137,10 +137,10 @@ public class MapPanelEvent implements MouseListener, KeyListener{
 				_targetId = targetId;
 				// FGCの時の経路探索.
 				if(_mapPanel._fgcRoadFlg){
-					_mapPanel.routing(_sourceId, _targetId);
+					_mapPanel.routing(_sourceId, _targetId, true);
 				// コンテキストのみの経路探索.
 				}else if(_mapPanel._roadDataFlg){
-					_mapPanel.routing_context(_sourceId, _targetId);
+					_mapPanel.routing_context(_sourceId, _targetId, true);
 				}
 			}else{
 				System.out.println("not found");

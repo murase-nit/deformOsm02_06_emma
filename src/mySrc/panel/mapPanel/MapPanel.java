@@ -24,6 +24,7 @@ import mySrc.coordinate.ConvertMercatorXyCoordinate;
 import mySrc.coordinate.LngLatMercatorUtility;
 
 import mySrc.QuickSort2;
+import mySrc.WriteDataToFile2;
 import mySrc.WriteDataToFile3;
 import mySrc.coordinate.ConvertLngLatXyCoordinate;
 import mySrc.coordinate.GetLngLatOsm;
@@ -45,6 +46,7 @@ import mySrc.panel.outputPanel.OutputPanel;
 import mySrc.yahooAPI.ContentsGeocorder;
 import mySrc.yahooAPI.LocalSearch;
 import mySrc.elastic.*;
+import mySrc.emma.GlueRoadDensity;
 
 /**
  * 左下の画面(地図表示)
@@ -68,7 +70,7 @@ public class MapPanel extends JPanel{
 	/** 初期の緯度. */
 	private static final double DEFAULT_LAT = 35.15778942665804;	// 鶴舞公園.
 	/** 初期のスケール. */
-	private static final int DEFAULT_SCALE = 15;
+	private static final int DEFAULT_SCALE = 14;
 	/** 地図スタイル */
 	private static final String DEFAULT_MAPSTYLE = "mapnik";
 	/** デフォルトのマーカーサイズ */
@@ -172,16 +174,27 @@ public class MapPanel extends JPanel{
 	public ArrayList<Point2D> _routingResult = new ArrayList<>();
 	/** 経路探索の描画フラグ */
 	public boolean _routingFlg = false;
+	// 複数の経路表示.
+	public ArrayList<ArrayList<Point2D>> _multiRoutingResult = new ArrayList<>();
+	public boolean _multiRoutingFlg = false;
 	
 	// focus-glue-context道路の描画.
 	/** 道路データ関係 */
 	public FGC_road  _fgc_road;
+	public FGC_road _fgcGlueRoad;
 	/** リンクを描画するフラグ */
 	public boolean _fgcRoadFlg = false;
 	
 	// 汎用的な描画用変数.
 	private ArrayList<ArrayList<Line2D>> _commonRoad = new ArrayList<>();
 	private boolean _commonFlg = false;
+	
+	// EMMA関係.
+	public int focusScale = 14;
+	public int glueInnerRadius = 200;
+	public int glueOuterRadius = 400;
+	public Point focusGlueWindowSize = new Point(glueOuterRadius, glueOuterRadius);
+
 	
 	///////////////////////////////////////////////////////////////////////////
 	//////////////////ここまで変数定義/////////////////////////////////////////////////////////
@@ -241,6 +254,7 @@ public class MapPanel extends JPanel{
 		
 		// 経路探索の結果の描画.
 		_mapPanelPaint.paintRouting(_routingResult, _routingFlg);
+		_mapPanelPaint.paintMultiRouting(_multiRoutingResult, _multiRoutingFlg);
 
 		// 汎用的なArrayList<ArrayList<line2dの描画>>.
 		_mapPanelPaint.paintCommonRoad(_commonFlg, _commonRoad);
@@ -612,7 +626,7 @@ public class MapPanel extends JPanel{
 		}
 		System.out.println(strokeLengthEvalArrayList);
 		System.out.println(facilityNumEvalArrayList);
-		WriteDataToFile3<Double, Integer> writeDataToFile3 = new WriteDataToFile3<>(strokeLengthEvalArrayList, facilityNumEvalArrayList);
+		WriteDataToFile3<Double, Integer> writeDataToFile3 = new WriteDataToFile3<>(strokeLengthEvalArrayList, facilityNumEvalArrayList, "../sample.csv");
 		
 	}
 	
@@ -927,7 +941,7 @@ public class MapPanel extends JPanel{
 //				}
 		}
 		
-		WriteDataToFile3<Integer, Double> writeDataToFile3 = new WriteDataToFile3<>(connectedGraphMaxStrokeNum, isolatedStrokeLengthsum);
+		WriteDataToFile3<Integer, Double> writeDataToFile3 = new WriteDataToFile3<>(connectedGraphMaxStrokeNum, isolatedStrokeLengthsum, "../sample.csv");
 		
 	}
 	
@@ -956,7 +970,7 @@ public class MapPanel extends JPanel{
 		
 		
 		new WriteDataToFile3<String, String>("ストローク1本あたりの到達可能な道路長の割合((Σ(あるストロークから到達可能なストロークの長さ)/(選択されたストローク長))/(選択されたストローク数)*100.)", 
-				" ストローク1本あたりの到達可能なストローク長の割合(Σ(あるストロークから到達可能なストロークの長さ)/(選択されたストローク長))/(選択されたストローク数)*100.");
+				" ストローク1本あたりの到達可能なストローク長の割合(Σ(あるストロークから到達可能なストロークの長さ)/(選択されたストローク長))/(選択されたストローク数)*100.", "../sample.csv");
 		
 		// 全ストローク長総和(画面内のみ).
 //		double allStrokeLengthInWindow = 0;
@@ -1133,7 +1147,7 @@ public class MapPanel extends JPanel{
 				}
 			}
 			averageShopReachableStrokeLength = averageShopReachableStrokeLength/selectedStrokeLengthSum/osmDataGeom._facilityId.size()*100;
-			new WriteDataToFile3<Double, Double>(averageReachableStrokeLength, averageShopReachableStrokeLength);
+			new WriteDataToFile3<Double, Double>(averageReachableStrokeLength, averageShopReachableStrokeLength, "../sample.csv");
 			
 
 			
@@ -1142,7 +1156,7 @@ public class MapPanel extends JPanel{
 			
 		}
 		
-		WriteDataToFile3<Integer, Double> writeDataToFile3 = new WriteDataToFile3<>(connectedGraphMaxStrokeNum, isolatedStrokeLengthsum);
+		WriteDataToFile3<Integer, Double> writeDataToFile3 = new WriteDataToFile3<>(connectedGraphMaxStrokeNum, isolatedStrokeLengthsum, "../sample.csv");
 		
 	}
 	
@@ -1275,13 +1289,14 @@ public class MapPanel extends JPanel{
 ///////////////////////////////////EMMA関係ここから///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	/**
 	 * 中心にfocusとglueの描画
 	 */
-	public void drawFocusGlue(){
-		drawFocusGlue(_lngLat, 17, _scale, 200, 400);
+	public void drawFocusGlue(String type){
+		drawFocusGlue(_lngLat, focusScale, _scale, glueInnerRadius, glueOuterRadius, type);
 	}
-	public void drawFocusGlue(Point2D aCenterLngLat, int aFoucsZoomLevel, int aContextZoomLevel, int glueInnerRadius, int glueOuterRadius){
+	public void drawFocusGlue(Point2D aCenterLngLat, int aFoucsZoomLevel, int aContextZoomLevel, int glueInnerRadius, int glueOuterRadius, String type){
 		if(_fgImageFlg == true){// 表示していたら消す.
 			_fgImageFlg = false;
 			repaint();
@@ -1291,7 +1306,7 @@ public class MapPanel extends JPanel{
 		
 		try{
 			URL urlGlue = new URL("http://133.68.13.112:8080/EmmaGlueMuraseOriginal/MainServlet?" +
-	    		"type="+"DrawGlue_v2"+
+	    		"type="+type+
 	    		"&centerLngLat="+aCenterLngLat.getX()+","+aCenterLngLat.getY()+
 	    		"&focus_zoom_level="+aFoucsZoomLevel+
 	    		"&context_zoom_level="+aContextZoomLevel+
@@ -1303,6 +1318,7 @@ public class MapPanel extends JPanel{
     		"&zoom=" +aFoucsZoomLevel+
     		"&size="+(glueInnerRadius*2)+"x"+(glueInnerRadius*2)+"" +
     		"&maptype=mapnik_local");
+			System.out.println(urlGlue);
 			System.out.println(urlFoucs);
 			_focusImage = ImageIO.read(urlFoucs);
 			_glueImage = ImageIO.read(urlGlue);
@@ -1315,17 +1331,14 @@ public class MapPanel extends JPanel{
 		
 	}
 	
-	public int focusScale = 17;
-	public int glueInnerRadius = 200;
-	public int glueOuterRadius = 400;
-	public Point focusGlueWindowSize = new Point(glueOuterRadius, glueOuterRadius);
+
 	/***
 	 * focus,glue,contextのリンクを描画
 	 */
-	public void drawFGC_link(){
-		drawFGC_link(_lngLat, focusScale, _scale, glueInnerRadius, glueOuterRadius);
+	public void drawFGC_link(String type){
+		drawFGC_link(_lngLat, focusScale, _scale, glueInnerRadius, glueOuterRadius, type);
 	}
-	public void drawFGC_link(Point2D aCenterLngLat, int aFoucsZoomLevel, int aContextZoomLevel, int glueInnerRadius, int glueOuterRadius){
+	public void drawFGC_link(Point2D aCenterLngLat, int aFoucsZoomLevel, int aContextZoomLevel, int glueInnerRadius, int glueOuterRadius, String type){
 		if(_fgcRoadFlg == true){// 表示していたら消す.
 			_fgcRoadFlg = false;
 			repaint();
@@ -1333,105 +1346,142 @@ public class MapPanel extends JPanel{
 		}
 		_fgcRoadFlg = true;
 		
-		//focus用の緯度経度xy変換
-		GetLngLatOsm getLngLatOsmFocus = new GetLngLatOsm(aCenterLngLat, aFoucsZoomLevel, WINDOW_SIZE);
-		ConvertLngLatXyCoordinate convertFocus = new ConvertLngLatXyCoordinate((Point2D.Double)getLngLatOsmFocus._upperLeftLngLat,
-				(Point2D.Double)getLngLatOsmFocus._lowerRightLngLat, WINDOW_SIZE);
-		//context用の緯度経度xy変換
-		GetLngLatOsm getLngLatOsmContext = new GetLngLatOsm(aCenterLngLat, aContextZoomLevel, WINDOW_SIZE);
-		ConvertLngLatXyCoordinate convertContext = new ConvertLngLatXyCoordinate((Point2D.Double)getLngLatOsmContext._upperLeftLngLat,
-				(Point2D.Double)getLngLatOsmContext._lowerRightLngLat, WINDOW_SIZE);
-		double glueInnerRadiusMeter = glueInnerRadius*convertFocus.meterPerPixel.getX();
-		double glueOuterRadiusMeter = glueOuterRadius*convertContext.meterPerPixel.getX();
-		
-		
-		// contextでのメルカトル座標系xy変換.
-		ConvertMercatorXyCoordinate convertMercator = new ConvertMercatorXyCoordinate(
-						LngLatMercatorUtility.ConvertLngLatToMercator((Point2D.Double)getLngLatOsmContext._upperLeftLngLat), 
-						LngLatMercatorUtility.ConvertLngLatToMercator((Point2D.Double)getLngLatOsmContext._lowerRightLngLat), WINDOW_SIZE);
-		// glueのxy変換.
-		ConvertElasticPointGlue convertXyGlue = new ConvertElasticPointGlue(glueInnerRadius, glueOuterRadius, glueInnerRadiusMeter, glueOuterRadiusMeter
-				, focusScale, _scale, _lngLat, convertFocus, convertContext, convertMercator);
-		
-		// focusのみ.
-		FGC_road fgc_FocusRoad = new FGC_road();
-		fgc_FocusRoad.startConnection();
-		fgc_FocusRoad.getFoucsRoad(_lngLat, glueInnerRadiusMeter, convertFocus);
-		fgc_FocusRoad.endConnection();
-		// contextのみ.
-		FGC_road fgc_ContextRoad = new FGC_road();
-		fgc_ContextRoad.startConnection();
-		fgc_ContextRoad.getContextRoad(_lngLat, glueOuterRadiusMeter, _upperLeftLngLat, _lowerRightLngLat, convertContext);
-		fgc_ContextRoad.endConnection();
-		// glue道路取得.
-		FGC_road fgcGlueRoad = new FGC_road();
-		fgcGlueRoad.startConnection();
-		fgcGlueRoad.getGlueRoad(_lngLat, focusScale, _scale, glueInnerRadius, glueOuterRadius, glueOuterRadiusMeter, convertXyGlue, convertContext);
-		fgcGlueRoad.endConnection();
-		// focus,glue,context.
-		_fgc_road = new FGC_road();
-		_fgc_road.startConnection();
-		_fgc_road.creatTmpRouteTable();
-		_fgc_road.insertTmpTable(fgc_FocusRoad._linkId, fgc_FocusRoad._sourceId, fgc_FocusRoad._targetId, fgc_FocusRoad._clazz, fgc_FocusRoad._length, fgc_FocusRoad._cost,fgc_FocusRoad._link);
-		_fgc_road.insertTmpTable(fgc_ContextRoad._linkId, fgc_ContextRoad._sourceId, fgc_ContextRoad._targetId, fgc_ContextRoad._clazz, fgc_ContextRoad._length, fgc_ContextRoad._cost,fgc_ContextRoad._link);
-		_fgc_road.insertTmpTable(fgcGlueRoad._linkId, fgcGlueRoad._sourceId, fgcGlueRoad._targetId, fgcGlueRoad._clazz, fgcGlueRoad._length, fgcGlueRoad._cost,fgcGlueRoad._link);
-		_fgc_road.insertFgcRoadData();
-		_fgc_road._linkPoint = new ArrayList<>();	// xy座標の道路データ(linkのインデックスが使えない).
-		_fgc_road._linkPoint.addAll(fgc_FocusRoad._linkPoint);
-		_fgc_road._linkPoint.addAll(fgc_ContextRoad._linkPoint);
-		_fgc_road._linkPoint.addAll(fgcGlueRoad._linkPoint);
-		_fgc_road._idXyHashMap = new HashMap<>();	// ノードIDとノードの位置(ｘｙ)を紐付したデータ.
-		_fgc_road._idXyHashMap.putAll(fgc_FocusRoad._idXyHashMap);
-		_fgc_road._idXyHashMap.putAll(fgc_ContextRoad._idXyHashMap);
-		_fgc_road._idXyHashMap.putAll(fgcGlueRoad._idXyHashMap);
-		
+		FgcRoadNetwork fgcRoadNetwork = new FgcRoadNetwork(_lngLat, _upperLeftLngLat, _lowerRightLngLat, aFoucsZoomLevel, aContextZoomLevel, 
+				glueInnerRadius, glueOuterRadius, aFoucsZoomLevel, aContextZoomLevel, WINDOW_SIZE);
+		fgcRoadNetwork.createFgcRoadNetwork(type);
+		_fgc_road = fgcRoadNetwork._fgc_road;
+		_fgcGlueRoad = fgcRoadNetwork._fgcGlueRoad;
 		
 		_fgcRoadFlg = true;
 		repaint();
-
 	}
 	
 	
 	/**
 	 * fgcのルーティング関係 mapPanelEventから呼び出される
 	 */
-	public void routing(int aSourceId, int aTargetId){
-	ArrayList<ArrayList<Integer>> routingResult = _fgc_road.execRouting(aSourceId, aTargetId, _upperLeftLngLat, _lowerRightLngLat);
-	_routingResult = new ArrayList<>();
-	double cost = 0;
-	for(int i=0; i<routingResult.size(); i++){
-		System.out.println("node ID:"+routingResult.get(i).get(0));
-		System.out.println("ノードの座標"+_fgc_road._idXyHashMap.get(routingResult.get(i).get(0)));
-		System.out.println("リンクの座標"+_fgc_road._idLinkHash.get(routingResult.get(i).get(1)));
-		System.out.println("コスト"+_fgc_road._routingCost.get(i));
-		//_routingResult.add(_idLinkHash.get(Integer.valueOf(routingResult.get(i).get(1))));
-		_routingResult.add(_fgc_road._idXyHashMap.get(Integer.valueOf(routingResult.get(i).get(0))));
-		cost += _fgc_road._routingCost.get(i);
+	public void routing(int aSourceId, int aTargetId, boolean paintFlg){
+		ArrayList<ArrayList<Integer>> routingResult = _fgc_road.execRouting(aSourceId, aTargetId, _upperLeftLngLat, _lowerRightLngLat, "cost");
+		_routingResult = new ArrayList<>();
+		double cost = 0;
+		for(int i=0; i<routingResult.size(); i++){
+	//		System.out.println("node ID:"+routingResult.get(i).get(0));
+	//		System.out.println("ノードの座標"+_fgc_road._idXyHashMap.get(routingResult.get(i).get(0)));
+	//		System.out.println("リンクの座標"+_fgc_road._idLinkHash.get(routingResult.get(i).get(1)));
+	//		System.out.println("コスト"+_fgc_road._routingCost.get(i));
+			//_routingResult.add(_idLinkHash.get(Integer.valueOf(routingResult.get(i).get(1))));
+			_routingResult.add(_fgc_road._idXyHashMap.get(Integer.valueOf(routingResult.get(i).get(0))));
+			cost += _fgc_road._routingCost.get(i);
+		}
+		System.out.println("総コスト"+cost);
+		new WriteDataToFile3<Double,Double>(cost, 0.0+aTargetId,"");
+		if(paintFlg){
+			_routingFlg = true;
+			repaint();
+		}
 	}
-	System.out.println("総コスト"+cost);
-	_routingFlg = true;
-	repaint();
-}
-/**
- * コンテキストのみのルーティング
- */
-	public void routing_context(int aSourceId, int aTargetId){
+	/**
+	 * コンテキストのみのルーティング
+	 */
+	public void routing_context(int aSourceId, int aTargetId, boolean paintFlg){
 		OsmRoadDataGeom osmRoadDataGeom  = new OsmRoadDataGeom();
 		osmRoadDataGeom.startConnection();
 		ArrayList<ArrayList<Integer>> routingResult = osmRoadDataGeom.execRouting(aSourceId, aTargetId, _upperLeftLngLat, _lowerRightLngLat);
 		_routingResult = new ArrayList<>();
+		double cost = 0;
 		for(int i=0; i<routingResult.size(); i++){
-			System.out.println("node ID : "+routingResult.get(i).get(0));
-			System.out.println("ノードの座標 "+_osmRoadDataGeom._idLngLatHash.get(routingResult.get(i).get(0)));
-			System.out.println("リンクの座標"+_osmRoadDataGeom._idLinkHash.get(routingResult.get(i).get(1)));
+//			System.out.println("node ID : "+routingResult.get(i).get(0));
+//			System.out.println("ノードの座標 "+_osmRoadDataGeom._idLngLatHash.get(routingResult.get(i).get(0)));
+//			System.out.println("リンクの座標"+_osmRoadDataGeom._idLinkHash.get(routingResult.get(i).get(1)));
 			_routingResult.add(_osmRoadDataGeom._idXyHash.get(Integer.valueOf(routingResult.get(i).get(0))));
+			cost += osmRoadDataGeom._routingCost.get(i);
 		}
 		osmRoadDataGeom.endConnection();
-		_routingFlg = true;
-		repaint();
+		System.out.println("総コスト"+cost);
+		new WriteDataToFile3<Double,Double>(cost, 0.0+aTargetId,"");
+		if(paintFlg){
+			_routingFlg = true;
+			repaint();
+		}
 	}
 	
-	
+	/**
+	 * glueの複数経路の計測
+	 */
+	public void measureGlueMultiRoute(){
+		// 中心からxピクセル離れた場所のリンクを取り出し，sourceId, targetIdを取り出す.
+		// 始点のノードIDが設定されているので，そのノードとの距離を求める.
+		OsmRoadDataGeom osmRoadDataGeom = new OsmRoadDataGeom();
+		osmRoadDataGeom.startConnection();
+		osmRoadDataGeom.insertOsmRoadOverCircle(_lngLat, LngLatMercatorUtility.calcDistanceFromLngLat(	// 円上のノードIDを取得.
+				_convert.convertXyCoordinateToLngLat(new Point(WINDOW_WIDTH/2, WINDOW_HEIGHT/2)),
+				_convert.convertXyCoordinateToLngLat(new Point(50,WINDOW_HEIGHT/2))));
+		osmRoadDataGeom.endConnection();
+		
+		_multiRoutingResult = new ArrayList<>();
+		for(int i=0; i<osmRoadDataGeom._targetId.size(); i++){
+			// osmRoadDataGeom._targetId.get(i)が_fgc_roadにあるか確認.
+//			boolean foundFlg = false;
+//			for(int j=0; j<_fgc_road._sourceId.size(); j++){
+//				if(_fgc_road._sourceId.get(j).intValue() == osmRoadDataGeom._targetId.get(i).intValue() ||
+//						_fgc_road._targetId.get(j).intValue() == osmRoadDataGeom._targetId.get(i).intValue()){
+//					foundFlg = true;
+//					break;
+//				}
+//			}
+//			if(!foundFlg) continue;
+			routing(_mapPanelEvent._sourceId, osmRoadDataGeom._targetId.get(i), false);
+			_multiRoutingResult.add(_routingResult);
+		}
+		_multiRoutingFlg = true;
+		repaint();
+	}
+	/**
+	 * 普通の地図での複数経路計測
+	 */
+	public void measureMultiRoute(){
+		// 中心からxピクセル離れた場所のリンクを取り出し，sourceId, targetIdを取り出す.
+		// 始点のノードIDが設定されているので，そのノードとの距離を求める.
+		OsmRoadDataGeom osmRoadDataGeom = new OsmRoadDataGeom();
+		osmRoadDataGeom.startConnection();
+		osmRoadDataGeom.insertOsmRoadOverCircle(_lngLat, LngLatMercatorUtility.calcDistanceFromLngLat(	// 円上のノードIDを取得.
+				_convert.convertXyCoordinateToLngLat(new Point(WINDOW_WIDTH/2, WINDOW_HEIGHT/2)),
+				_convert.convertXyCoordinateToLngLat(new Point(50,WINDOW_HEIGHT/2))));
+		osmRoadDataGeom.endConnection();
+		
+		_multiRoutingResult = new ArrayList<>();
+		for(int i=0; i<osmRoadDataGeom._targetId.size(); i++){
+			// osmRoadDataGeom._targetId.get(i)が_fgc_roadにあるか確認.
+			boolean foundFlg = false;
+			for(int j=0; j<_fgc_road._sourceId.size(); j++){
+				if(_fgc_road._sourceId.get(j).intValue() == osmRoadDataGeom._targetId.get(i).intValue() ||
+						_fgc_road._targetId.get(j).intValue() == osmRoadDataGeom._targetId.get(i).intValue()){
+					foundFlg = true;
+					break;
+				}
+			}
+			if(!foundFlg) continue;
+			routing_context(_mapPanelEvent._sourceId, osmRoadDataGeom._targetId.get(i), false);
+			_multiRoutingResult.add(_routingResult);
+		}
+		_multiRoutingFlg = true;
+		repaint();
+	}
+	/**
+	 * glueの道路の密度を計測
+	 */
+	public void measureGlueRoadDensity(){
+		System.out.println("push bottom");
+		GlueRoadDensity glueRoadDensity = new GlueRoadDensity(_fgcGlueRoad, glueInnerRadius, glueOuterRadius);
+		glueRoadDensity.measureGlueRoadDensitySameCircle();
+		glueRoadDensity.measureGlueRoadDensitySameAngle();
+		new WriteDataToFile3<String, String>("同心円方向","", "");
+		new WriteDataToFile3<String, String>("半径","数", "");
+		new WriteDataToFile3<Integer, Integer>(glueRoadDensity._eachRadius, glueRoadDensity._intersectEachCircleNum, "");
+		new WriteDataToFile3<String, String>("放射方向","", "");
+		new WriteDataToFile3<String, String>("角度","数", "");
+		new WriteDataToFile3<Double, Integer>(glueRoadDensity._eachAngle, glueRoadDensity._intersectEachAngleNum, "");
+	}
 	
 	////////////////////////////////////
 	//////////ここから上に新規メソッド追加//////////////////////////

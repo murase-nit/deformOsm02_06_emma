@@ -174,6 +174,7 @@ public class OsmRoadDataGeom extends HandleDbTemplateSuper {
 							"), " +
 						""+HandleDbTemplateSuper.WGS84_EPSG_CODE+")" +
 					",geom_way)" +
+					" and clazz > 12" +
 					"";
 			System.out.println("円形範囲道路の取得"+statement);
 			ResultSet rs = execute(statement);
@@ -204,12 +205,86 @@ public class OsmRoadDataGeom extends HandleDbTemplateSuper {
 			}
 	}
 	
+	/***
+	 * 円上の道路データを取り出す
+	 */
+	public void insertOsmRoadOverCircle(Point2D aCenterLngLat, double aRadiusMeter){
+		_linkId = new ArrayList<>();
+		_link = new ArrayList<>();
+		_sourceId = new ArrayList<>();
+		_targetId = new ArrayList<>();
+		_length = new ArrayList<>();
+		_length2 = new ArrayList<>();
+		_clazz = new ArrayList<>();
+		_arc = new ArrayList<>();
+		_idLngLatHash = new HashMap<>();
+		_idLinkHash = new HashMap<>();
+		_sourcePoint = new ArrayList<>();
+		_targetPoint = new ArrayList<>();
+		_idIndexHash = new HashMap<>();
+		
+		try{
+			String statement;
+			// SRID=4326.
+			statement = "" +
+				"select "+
+					" id, osm_name,osm_source_id, osm_target_id, clazz, source, target, km, cost, x1, y1, x2, y2, geom_way" +
+				" from "+SCHEMA+"."+TABLE+" " +
+				" where " +
+					" st_crosses("+
+						"st_transform("+
+							" st_buffer(" +
+								"st_transform("+
+									"st_geomFromText(" +
+										"'Point("+(aCenterLngLat.getX())+" "+
+											(aCenterLngLat.getY())+")'" +
+										", "+HandleDbTemplateSuper.WGS84_EPSG_CODE+"" +
+									")," +
+									WGS84_UTM_EPGS_CODE +
+								")," +
+								aRadiusMeter+
+							"), " +
+						""+HandleDbTemplateSuper.WGS84_EPSG_CODE+")" +
+					",geom_way)" +
+					" and clazz > 12" +
+					"";
+			System.out.println("円形範囲道路の取得"+statement);
+			ResultSet rs = execute(statement);
+			while(rs.next()){
+				_linkId.add(rs.getInt("id"));
+				_sourceId.add(rs.getInt("source"));
+				_targetId.add(rs.getInt("target"));
+				_sourcePoint.add(new Point2D.Double(rs.getDouble("x1"), rs.getDouble("y1")));
+				_targetPoint.add(new Point2D.Double(rs.getDouble("x2"), rs.getDouble("y2")));
+				_link.add((Line2D)new Line2D.Double(rs.getDouble("x1"), rs.getDouble("y1"), rs.getDouble("x2"), rs.getDouble("y2")));
+				_length.add(rs.getDouble("km"));
+				_length2.add(rs.getDouble("cost"));
+				_clazz.add(rs.getInt("clazz"));
+//				System.out.println(GeometryParsePostgres.getLineStringMultiPoint((PGgeometry)rs.getObject("geom")));
+				_arc.add(GeometryParsePostgres.getLineStringMultiLine((PGgeometry)rs.getObject("geom_way")));
+				if(!_idLngLatHash.containsKey(_sourceId.get(_sourceId.size()-1))){
+					_idLngLatHash.put(_sourceId.get(_sourceId.size()-1), _sourcePoint.get(_sourcePoint.size()-1));
+				}
+				if(!_idLngLatHash.containsKey(_targetId.get(_targetId.size()-1))){
+					_idLngLatHash.put(_targetId.get(_targetId.size()-1), _targetPoint.get(_targetPoint.size()-1));
+				}
+				_idLinkHash.put(_linkId.get(_linkId.size()-1), _link.get(_link.size()-1));
+				_idIndexHash.put(_linkId.get(_linkId.size()-1), _linkId.size()-1);
+			}
+			rs.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	}
+	
+	public ArrayList<Double> _routingCost = new ArrayList<>();
 	/**
 	 * 経路探索をする
 	 * return .get(i).get(0): i番目の経路のsourceId .get(i).get(1):i番目の経路のエッジID
 	 */
 	public ArrayList<ArrayList<Integer>> execRouting(int aSourceId, int aTargetId, Point2D aUpperLeftLngLat, Point2D aLowerRightLngLat){
 		ArrayList<ArrayList<Integer>> routingResult = new ArrayList<>();
+		_routingCost = new ArrayList<>();
 		try{
 			String stmt = "select " +
 						" seq, id1, id2, cost "+
@@ -224,7 +299,8 @@ public class OsmRoadDataGeom extends HandleDbTemplateSuper {
 //								target:	int4 型の終点ノードの識別子
 								", target::integer as target" +
 //								cost:	float8 型のエッジにかかる重み。負の重みはエッジがグラフに挿入されることを防ぎます。
-								", cost::double precision as cost" +
+								//", cost::double precision as cost" +
+								", km::double precision as cost" +
 //								reverse_cost:	(オプション) エッジの反対方向のコスト。この値は directed および``has_rcost`` パラメータが true の場合のみ使用されます。(負のコストについては前述の通りです)
 								", reverse_cost::double precision as reverse_cost"+
 							" from"+
@@ -246,13 +322,14 @@ public class OsmRoadDataGeom extends HandleDbTemplateSuper {
 							","+aSourceId+""+//int4 始点ノードのID
 							","+aTargetId+""+//int4 終点ノードのID
 							",false"+//有向グラフの場合は true を指定
-							",true" +//true の場合、SQLで生成される行セットの reverse_cost 列は、エッジの逆方向にかかる重みとして使用されます。
+							",false" +//true の場合、SQLで生成される行セットの reverse_cost 列は、エッジの逆方向にかかる重みとして使用されます。
 						");";
 			System.out.println(stmt);
 			ResultSet rSet = execute(stmt);
 			while(rSet.next()){
 				routingResult.add(new ArrayList<>(Arrays.asList(rSet.getInt("id1"), rSet.getInt("id2"))));
-				System.out.println(new ArrayList<>(Arrays.asList(rSet.getInt("id1"), rSet.getInt("id2"))));
+				_routingCost.add(rSet.getDouble("cost"));
+				//System.out.println(new ArrayList<>(Arrays.asList(rSet.getInt("id1"), rSet.getInt("id2"))));
 			}
 		}catch(Exception e){
 			e.printStackTrace();

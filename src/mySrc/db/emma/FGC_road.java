@@ -217,33 +217,8 @@ public class FGC_road  extends HandleDbTemplateSuper {
 				_idXyHashMap.put(_targetId.get(_targetId.size()-1), (Point2D)_convert.convertLngLatGlueXy(_link.get(_link.size()-1).getP2()));
 				_idLinkHash.put(_linkId.get(_linkId.size()-1), _link.get(_link.size()-1));
 				_linkPoint.add(new Line2D.Double(_convert.convertLngLatGlueXy(_link.get(_link.size()-1).getP1()), _convert.convertLngLatGlueXy(_link.get(_link.size()-1).getP2())));
-				//_linkPoint.add(new Line2D.Double(_convert2.convertLngLatToXyCoordinate(_link.get(_link.size()-1).getP1()), _convert2.convertLngLatToXyCoordinate(_link.get(_link.size()-1).getP2())));
-//				System.out.println("$$$$$$$$$$$$$$"+_convert2.convertLngLatToXyCoordinate(_link.get(_link.size()-1).getP1())+"  "+_convert2.convertLngLatToXyCoordinate(_link.get(_link.size()-1).getP2()));
-//				System.out.println("##############"+_convert.convertLngLatGlueXy(_link.get(_link.size()-1).getP1())+"  "+_convert.convertLngLatGlueXy(_link.get(_link.size()-1).getP2()));
 			}
 		}
-		///////////////////////////////
-		//_strokePointは_linkPointに変換
-		///////////////////////////////
-//		_linkPoint = new ArrayList<>();
-//		for(int i=0; i<glueRoadXml._strokePoint.size(); i++){
-//			for(int j=0; j<glueRoadXml._strokePoint.get(i).size()-1; j++){
-//				if(
-//						(new Point2D.Double(aGlueOuterRadius, aGlueOuterRadius).distance(glueRoadXml._strokePoint.get(i).get(j))<aGlueOuterRadius || 
-//						new Point2D.Double(aGlueOuterRadius, aGlueOuterRadius).distance(glueRoadXml._strokePoint.get(i).get(j+1))<aGlueOuterRadius)
-//						&&
-//						(new Point2D.Double(aGlueOuterRadius, aGlueOuterRadius).distance(glueRoadXml._strokePoint.get(i).get(j))>aGlueInnerRadius || 
-//						new Point2D.Double(aGlueOuterRadius, aGlueOuterRadius).distance(glueRoadXml._strokePoint.get(i).get(j+1))>aGlueInnerRadius)
-//				){
-//					// focusの位置が中心に来るようにずらす.
-//					_linkPoint.add(new Line2D.Double(
-//							glueRoadXml._strokePoint.get(i).get(j).getX()+(MapPanel.WINDOW_WIDTH/2-aGlueOuterRadius), 
-//							glueRoadXml._strokePoint.get(i).get(j).getY()+(MapPanel.WINDOW_WIDTH/2-aGlueOuterRadius), 
-//							glueRoadXml._strokePoint.get(i).get(j+1).getX()+(MapPanel.WINDOW_WIDTH/2-aGlueOuterRadius), 
-//							glueRoadXml._strokePoint.get(i).get(j+1).getY()+(MapPanel.WINDOW_WIDTH/2-aGlueOuterRadius)));
-//				}
-//			}
-//		}
 		
 		// costの計算
 		// 道路クラスと制限速度の関係 このリストにないものは10にする.
@@ -267,6 +242,82 @@ public class FGC_road  extends HandleDbTemplateSuper {
 		}
 		
 	}
+	
+	/**
+	 * glue内の道路を取得(道なり道路選別手法，すべての道路選択用)
+	 * @param aCenterLngLat
+	 * @param aFoucsZoomLevel
+	 * @param aContextZoomLevel
+	 * @param aGlueInnerRadius
+	 * @param aGlueOuterRadius
+	 */
+	public void getGlueRoad_link(Point2D aCenterLngLat, int aFoucsZoomLevel, int aContextZoomLevel, int aGlueInnerRadius, int aGlueOuterRadius, double aGlueOuterRadiusMeter,
+			ConvertElasticPointGlue _convert, ConvertLngLatXyCoordinate _convert2, String type){
+		///////////////////////
+		// glueのベクターデータを取得.
+		///////////////////////
+		GlueRoadXml_link glueRoadXml_link = new GlueRoadXml_link(aCenterLngLat, aFoucsZoomLevel, aContextZoomLevel, aGlueInnerRadius, aGlueOuterRadius, type);
+		/////////////////////////
+		// 道路IDからその他の情報を取得.
+		/////////////////////////
+		_linkId = new ArrayList<>();
+		_sourceId = new ArrayList<>();
+		_targetId = new ArrayList<>();
+		_clazz = new ArrayList<>();
+		_length = new ArrayList<>();
+		_cost = new ArrayList<>();
+		_link = new ArrayList<>();
+		_idLngLatHash = new HashMap<>();
+		_idXyHashMap = new HashMap<>();
+		_idLinkHash = new HashMap<>();
+		_linkPoint = new ArrayList<>();
+		// glue範囲内にある道路データを取得.
+		OsmRoadDataGeom osmRoadDataGeom = new OsmRoadDataGeom();
+		osmRoadDataGeom.startConnection();
+		osmRoadDataGeom.insertOsmRoadInCircle(aCenterLngLat, aGlueOuterRadiusMeter);
+		osmRoadDataGeom.endConnection();
+		for(int i=0; i<glueRoadXml_link._linkId.size(); i++){
+		//for(int i=0; i<300; i++){
+			if(osmRoadDataGeom._linkId.contains(glueRoadXml_link._linkId.get(i))){	// glue外側より中にあればその道路を追加.
+				_linkId.add(osmRoadDataGeom._linkId.get(osmRoadDataGeom._idIndexHash.get(glueRoadXml_link._linkId.get(i))));
+				_sourceId.add(osmRoadDataGeom._sourceId.get(osmRoadDataGeom._idIndexHash.get(glueRoadXml_link._linkId.get(i))));
+				_targetId.add(osmRoadDataGeom._targetId.get(osmRoadDataGeom._idIndexHash.get(glueRoadXml_link._linkId.get(i))));
+				_clazz.add(osmRoadDataGeom._clazz.get(osmRoadDataGeom._idIndexHash.get(glueRoadXml_link._linkId.get(i))));
+				_length.add(osmRoadDataGeom._length.get(osmRoadDataGeom._idIndexHash.get(glueRoadXml_link._linkId.get(i))));
+				_link.add(osmRoadDataGeom._link.get(osmRoadDataGeom._idIndexHash.get(glueRoadXml_link._linkId.get(i))));
+				
+				_idLngLatHash.put(_sourceId.get(_sourceId.size()-1), _link.get(_link.size()-1).getP1());
+				_idXyHashMap.put(_sourceId.get(_sourceId.size()-1), (Point2D)_convert.convertLngLatGlueXy(_link.get(_link.size()-1).getP1()));
+				_idLngLatHash.put(_targetId.get(_targetId.size()-1), _link.get(_link.size()-1).getP2());
+				_idXyHashMap.put(_targetId.get(_targetId.size()-1), (Point2D)_convert.convertLngLatGlueXy(_link.get(_link.size()-1).getP2()));
+				_idLinkHash.put(_linkId.get(_linkId.size()-1), _link.get(_link.size()-1));
+				_linkPoint.add(new Line2D.Double(_convert.convertLngLatGlueXy(_link.get(_link.size()-1).getP1()), _convert.convertLngLatGlueXy(_link.get(_link.size()-1).getP2())));
+			}
+		}
+		
+		// costの計算
+		// 道路クラスと制限速度の関係 このリストにないものは10にする.
+		HashMap<Integer, Integer> clazzSpeed = new HashMap<>();
+		clazzSpeed.put(11, 120);
+		clazzSpeed.put(12, 30);
+		clazzSpeed.put(13, 90);
+		clazzSpeed.put(14, 30);
+		clazzSpeed.put(15, 70);
+		clazzSpeed.put(16, 30);
+		clazzSpeed.put(21, 60);
+		clazzSpeed.put(22, 30);
+		clazzSpeed.put(31, 40);
+		clazzSpeed.put(32, 50);
+		clazzSpeed.put(41, 30);
+		clazzSpeed.put(42, 30);
+		for(int i=0; i<_linkId.size(); i++){
+			// コスト(距離/制限速度).
+			double cost = clazzSpeed.containsKey(_clazz.get(i)) ? (double)_length.get(i)/clazzSpeed.get(_clazz.get(i)) : (double)_length.get(i)/10;
+			_cost.add(cost);
+		}
+		
+	}
+	
 	/**
 	 * 一時テーブルへ格納
 	 */
@@ -409,7 +460,7 @@ public class FGC_road  extends HandleDbTemplateSuper {
 								"st_transform(" +
 									"ST_SetSRID(ST_MakePoint("+aCenterLngLat.getX()+", "+aCenterLngLat.getY()+"),"+WGS84_EPSG_CODE+"), "+
 									WGS84_UTM_EPGS_CODE+"" +
-								"), "+aRadius+"" +
+								"), "+(aRadius)+"" +
 							"), "+WGS84_EPSG_CODE+"" +
 						"), "+
 						"geom_way) " +
@@ -556,7 +607,7 @@ public class FGC_road  extends HandleDbTemplateSuper {
 	 * 経路探索をする
 	 * return .get(i).get(0): i番目の経路のsourceId .get(i).get(1):i番目の経路のエッジ(リンク) ID, .get(i).get(2): 通過コスト
 	 */
-	public ArrayList<ArrayList<Integer>> execRouting(int aSourceId, int aTargetId, Point2D aUpperLeftLngLat, Point2D aLowerRightLngLat){
+	public ArrayList<ArrayList<Integer>> execRouting(int aSourceId, int aTargetId, Point2D aUpperLeftLngLat, Point2D aLowerRightLngLat, String routingType){
 		ArrayList<ArrayList<Integer>> routingResult = new ArrayList<>();
 		_routingCost = new ArrayList<>();
 		try{
@@ -574,7 +625,8 @@ public class FGC_road  extends HandleDbTemplateSuper {
 								", target::integer as target" +
 //								cost:	float8 型のエッジにかかる重み。負の重みはエッジがグラフに挿入されることを防ぎます。
 //								", cost::double precision as cost" +
-								", cost::double precision as cost" +
+//								", km::double precision as cost" +
+								", "+routingType+"::double precision as cost" +
 //								reverse_cost:	(オプション) エッジの反対方向のコスト。この値は directed および``has_rcost`` パラメータが true の場合のみ使用されます。(負のコストについては前述の通りです)
 //								", reverse_cost::double precision as reverse_cost"+
 							" from"+
@@ -590,7 +642,7 @@ public class FGC_road  extends HandleDbTemplateSuper {
 			while(rSet.next()){
 				routingResult.add(new ArrayList<>(Arrays.asList(rSet.getInt("id1"), rSet.getInt("id2"))));
 				_routingCost.add(rSet.getDouble("cost"));
-				System.out.println(new ArrayList<>(Arrays.asList(rSet.getInt("id1"), rSet.getInt("id2"))));
+				//System.out.println(new ArrayList<>(Arrays.asList(rSet.getInt("id1"), rSet.getInt("id2"))));
 			}
 		}catch(Exception e){
 			e.printStackTrace();

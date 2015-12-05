@@ -14,12 +14,19 @@ import java.util.ArrayList;
  *
  */
 public class WriteDataToFile3<T extends Object,F extends Object> {
-	private static final String FILE_PATH = "../sample.csv";
+	private String FILE_PATH = "../sample.csv";
 	
-	public WriteDataToFile3(ArrayList<T> aData1, ArrayList<F> aData2){
+	public WriteDataToFile3(ArrayList<T> aData1, ArrayList<F> aData2, String filePath){
+		FILE_PATH = filePath.equals("") ? FILE_PATH : filePath;
 		writeFile3(aData1, aData2);
 	}
-	public WriteDataToFile3(T aData1, F aData2){
+	public WriteDataToFile3(ArrayList<T> aData1, String filePath){
+		FILE_PATH = filePath.equals("") ? FILE_PATH : filePath;
+		writeFile3(aData1);
+	}
+	
+	public WriteDataToFile3(T aData1, F aData2, String filePath){
+		FILE_PATH = filePath.equals("") ? FILE_PATH : filePath;
 		writeFile3(aData1, aData2);
 	}
 	
@@ -34,6 +41,26 @@ public class WriteDataToFile3<T extends Object,F extends Object> {
 				
 				for(int i=0; i<aData1.size(); i++){
 						pw.println(""+aData1.get(i)+","+aData2.get(i));
+		    	}
+		        pw.close();
+		      }else{
+		        System.out.println("ファイルに書き込めません");
+		      }
+		    }catch(IOException e){
+		      System.out.println(e);
+		    }
+	}
+	private void writeFile3(ArrayList<T> aData1){
+		
+		try{
+			File file = new File(FILE_PATH);
+
+			if (checkBeforeWritefile(file)){
+				//PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(file)));
+				PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(file,true)));
+				
+				for(int i=0; i<aData1.size(); i++){
+						pw.println(""+aData1.get(i));
 		    	}
 		        pw.close();
 		      }else{
