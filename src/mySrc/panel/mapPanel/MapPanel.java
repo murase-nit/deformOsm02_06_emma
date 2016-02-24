@@ -65,12 +65,10 @@ public class MapPanel extends JPanel{
 	/** 上側のパネルの高さ(入力用パネル). */
 	public static final int UPPER_AREA_HEIGHT = 150;
 	
-	/** 初期の経度. */
-	private static final double DEFAULT_LNG = 136.9309671669116;	// 鶴舞公園.
-	/** 初期の緯度. */
-	private static final double DEFAULT_LAT = 35.15778942665804;	// 鶴舞公園.
-	/** 初期のスケール. */
-	private static final int DEFAULT_SCALE = 14;
+//	/** 初期の経度. */
+//	private static final double DEFAULT_LNG = 136.9309671669116;	// 鶴舞公園.
+//	/** 初期の緯度. */
+//	private static final double DEFAULT_LAT = 35.15778942665804;	// 鶴舞公園.
 	/** 地図スタイル */
 	private static final String DEFAULT_MAPSTYLE = "mapnik";
 	/** デフォルトのマーカーサイズ */
@@ -188,10 +186,22 @@ public class MapPanel extends JPanel{
 	// 汎用的な描画用変数.
 	private ArrayList<ArrayList<Line2D>> _commonRoad = new ArrayList<>();
 	private boolean _commonFlg = false;
-	
+
+
+//	/** 初期の経度. */
+//	private static final double DEFAULT_LNG = 136.91574096679688;	// case2.
+//	/** 初期の緯度. */
+//	private static final double DEFAULT_LAT = 35.16242257945222;	// case2.
+	/** 初期の経度. */
+	private static final double DEFAULT_LNG = 136.9309671669116;	// case1 鶴舞公園.
+	/** 初期の緯度. */
+	private static final double DEFAULT_LAT = 35.15778942665804;	// case1 鶴舞公園.
+
+	/** 初期のスケール. */
+	private static final int DEFAULT_SCALE = 15;
 	// EMMA関係.
-	public int focusScale = 14;
-	public int glueInnerRadius = 200;
+	public int focusScale = 16;
+	public int glueInnerRadius = 300;
 	public int glueOuterRadius = 400;
 	public Point focusGlueWindowSize = new Point(glueOuterRadius, glueOuterRadius);
 

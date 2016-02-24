@@ -2,9 +2,11 @@ package mySrc.emma;
 
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
+import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 
 import mySrc.db.emma.FGC_road;
+import mySrc.panel.mapPanel.MapPanel;
 
 /**
  * glueの道路の密度を計測する
@@ -42,10 +44,15 @@ public class GlueRoadDensity {
 		_xyLink = new ArrayList<>();
 		for(int i=0; i<_Fgc_road._linkPoint.size(); i++){
 			_xyLink.add(new Line2D.Double(
-					_Fgc_road._linkPoint.get(i).getX1()-_glueOuterRadius,
-					_Fgc_road._linkPoint.get(i).getY1()-_glueOuterRadius,
-					_Fgc_road._linkPoint.get(i).getX2()-_glueOuterRadius,
-					_Fgc_road._linkPoint.get(i).getY2()-_glueOuterRadius));
+//					_Fgc_road._linkPoint.get(i).getX1()-_glueOuterRadius,
+//					_Fgc_road._linkPoint.get(i).getY1()-_glueOuterRadius,
+//					_Fgc_road._linkPoint.get(i).getX2()-_glueOuterRadius,
+//					_Fgc_road._linkPoint.get(i).getY2()-_glueOuterRadius));
+					_Fgc_road._linkPoint.get(i).getX1() - (MapPanel.WINDOW_WIDTH/2),
+					_Fgc_road._linkPoint.get(i).getY1() - (MapPanel.WINDOW_WIDTH/2),
+					_Fgc_road._linkPoint.get(i).getX2() - (MapPanel.WINDOW_WIDTH/2),
+					_Fgc_road._linkPoint.get(i).getY2() - (MapPanel.WINDOW_WIDTH/2)));
+
 		}
 
 	}
@@ -54,13 +61,21 @@ public class GlueRoadDensity {
 	 * 同心円方向の道路の密度を計測
 	 */
 	public void measureGlueRoadDensitySameCircle(){
-		
+		_eachRadius = new ArrayList<>();
+		_intersectEachCircleNum = new ArrayList<>();
 		for(int radius=_glueInnerRadius; radius<=_glueOuterRadius; radius+=((_glueOuterRadius-_glueInnerRadius)/10)){
+			System.out.println("##"+radius+"##");
 			_eachRadius.add(radius);
 			int intersectInCircleNum = 0;	// 同心円上に交差するリンクの数.
 			for(int i=0; i<_xyLink.size(); i++){
 				if(isIntersectsCircle(_xyLink.get(i), radius)){
 					intersectInCircleNum++;
+					System.out.println("link: lineString("+
+					_Fgc_road._link.get(i).getX1()+" "+
+					_Fgc_road._link.get(i).getY1()+","+
+					_Fgc_road._link.get(i).getX2()+" "+
+					_Fgc_road._link.get(i).getY2()+")"
+							);
 				}
 			}
 			_intersectEachCircleNum.add(intersectInCircleNum);
